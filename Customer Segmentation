@@ -1,0 +1,781 @@
+%md
+#### Default Config Function to access CRM RDP
+
+#############################################################################################################################################################################
+
+%run "/Shared/Generic_Functions/Main"
+
+#############################################################################################################################################################################
+
+%run "/Shared/Generic_Functions/ConnectionConfig/connectionConfig" 
+
+#############################################################################################################################################################################
+
+%run "/Shared/Generic_Functions/IOFunctions/IOFunctions"
+
+#############################################################################################################################################################################
+
+%md
+### Import required packages
+
+#############################################################################################################################################################################
+
+%sh
+printf "\n\e[1m%sinstalling sklearn\e[0m\n%s                                                        \n"
+#pip install scikit-learn
+pip install scikit-learn>=0.23.0
+printf "\n\e[1m%sinstalling imbalanced-learn\e[0m\n%s                                               \n"
+#pip install imblearn
+pip install imbalanced-learn
+printf "\n\e[1m%sinstalling imageio\e[0m\n%s                                                        \n"
+pip install imageio
+printf "\n\e[1m%sinstalling joblib\e[0m\n%s                                                         \n"
+pip install joblib
+printf "\n\e[1m%sinstalling matplotlib\e[0m\n%s                                                     \n"
+pip install matplotlib
+#printf "\n\e[1m%sinstalling pandas_profiling\e[0m\n%s                                              \n"
+#pip install pandas_profiling
+printf "\n\e[1m%sinstalling numpy\e[0m\n%s                                                          \n"
+pip install numpy
+printf "\n\e[1m%sinstalling pandas\e[0m\n%s                                                         \n"
+pip install pandas
+printf "\n\e[1m%sinstalling scipy\e[0m\n%s                                                          \n"
+pip install scipy
+printf "\n\e[1m%sinstalling seaborn\e[0m\n%s                                                        \n"
+pip install seaborn
+printf "\n\e[1m%sinstalling pyarrow\e[0m\n%s                                                        \n"
+pip install pyarrow
+#printf "\n\e[1m%sinstalling openpyxl\e[0m\n%s                                                        \n"
+#pip install openpyxl
+printf "\n\e[1m%sinstalling squarify\e[0m\n%s                                                        \n"
+pip install squarify
+#printf "\n\e[1m%sinstalling xlrd\e[0m\n%s                                                        \n"
+#pip install xlrd
+printf "\n\e[1m%sinstalling pyspark\e[0m\n%s                                                        \n"
+pip install pyspark
+printf "\n\e[1m%sinstalling mlflow\e[0m\n%s                                                        \n"
+pip install mlflow
+
+#############################################################################################################################################################################
+
+%py
+from datetime import date,timedelta,datetime
+start = datetime.now()                                                 # Calculating Time needed to Run Code
+
+import argparse
+import matplotlib as mpl
+import mlflow
+import mlflow.spark
+import numpy as np
+import pandas as pd
+import random
+import seaborn as sns
+import squarify
+import warnings, sys, os, gc
+
+from dateutil.relativedelta import *
+from matplotlib import pyplot as plt
+
+from pyspark.ml import Pipeline
+from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
+from pyspark.ml.feature import IndexToString, MinMaxScaler, Normalizer, PCA, StandardScaler, StringIndexer, VectorAssembler, VectorIndexer 
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+
+from pyspark.sql import *
+from pyspark.sql.functions import *
+from pyspark.sql.types import StringType,BooleanType,DateType
+
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.stats import zscore, norm, skew
+
+
+from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import cross_val_score, KFold, train_test_split
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder, robust_scale, StandardScaler
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+from pprint import pprint
+from pyarrow import parquet as pq
+
+sqlCtx = SQLContext(sc)
+
+%matplotlib inline
+
+plt.figure(figsize=(60,20))
+sns.set(font_scale=2)
+
+print("Script run times")
+print("Script execution stared at:", start)
+end = datetime.now()
+print("Script execution ended at:", end)
+total_time = end - start
+print("Script totally ran for :", total_time)
+
+#import openpyxl
+
+#############################################################################################################################################################################
+
+class color:
+   PURPLE =    '\033[95m'
+   CYAN =      '\033[96m'
+   DARKCYAN =  '\033[36m'
+   BLUE =      '\033[94m'
+   GREEN =     '\033[92m'
+   YELLOW =    '\033[93m'
+   RED =       '\033[91m'
+   BOLD =      '\033[1m'
+   UNDERLINE = '\033[4m'
+   END =       '\033[0m'
+]
+#############################################################################################################################################################################
+
+#%py
+#from datetime import date,timedelta,datetime
+#start = datetime.now()                                                 # Calculating Time needed to Run Code
+#
+#from dateutil.relativedelta import *
+#import numpy as np
+#import pandas as pd
+#import openpyxl
+#import warnings
+#import argparse, sys, os, gc
+#import matplotlib.pyplot as plt
+#import matplotlib as mpl                                                       
+#
+#import seaborn as sns
+#import squarify
+#
+#from pprint import pprint
+#import random                                                                   #
+#
+#from scipy import stats                                                         #
+#from scipy.cluster.hierarchy import dendrogram, linkage                         # 
+#from scipy.stats import zscore, norm, skew                                      # 
+#
+#from sklearn import preprocessing                                               # 
+##from sklearn.preprocessing import Imputer                                      #                                    # Multivariate feature imputation
+#from sklearn.preprocessing import robust_scale, StandardScaler, LabelEncoder
+#from sklearn.model_selection import cross_val_score, train_test_split                            # Dataframe splitting or we can use KFold
+#from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+#
+##Classification
+#from sklearn import metrics, tree
+#from sklearn.cluster import KMeans
+#from sklearn.linear_model import LogisticRegression
+#from sklearn.ensemble import RandomForestClassifier
+#from sklearn.model_selection import KFold
+#from sklearn.metrics import classification_report, confusion_matrix
+#
+#import sklearn.neural_network as nn
+#from sklearn.neural_network import MLPClassifier
+#
+#import pyarrow
+#import pyarrow.parquet as pq
+#
+#
+#import warnings
+#warnings.filterwarnings("ignore")
+#
+## Configure MLflow Experiment
+#mlflow_experiment_id = 866112
+#
+## Including MLflow
+#import mlflow
+#import mlflow.spark
+#
+#from pyspark.sql import *
+#from pyspark.sql.functions import *
+#from pyspark.sql.types import *
+#
+#from pyspark.ml import Pipeline
+#from pyspark.ml.classification import RandomForestClassifier
+#from pyspark.ml.evaluation import MulticlassClassificationEvaluator, RegressionEvaluator
+#from pyspark.ml.feature import IndexToString, MinMaxScaler, Normalizer, StringIndexer, VectorAssembler, VectorIndexer
+#from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+#
+#
+#sqlCtx = SQLContext(sc)
+#
+#%matplotlib inline
+#
+#plt.figure(figsize=(60,20))
+#sns.set(font_scale=2)
+#
+#print("Script run times")
+#print("Script execution stared at:", start)
+#end = datetime.now()
+#print("Script execution ended at:", end)
+#total_time = end - start
+#print("Script totally ran for :", total_time)
+
+#############################################################################################################################################################################
+
+%md
+### Reading required data
+
+#############################################################################################################################################################################
+
+%md
+##### Loading UK customer related info
+
+#############################################################################################################################################################################
+
+cust = spark.read.parquet('adl://prdszendsadlsrdpacqnbc.azuredatalakestore.net/PREP/1stParty/SSO/Sensitive/GB/Shell_Digital_Account/Shell_Digital_Account_parquet').createOrReplaceTempView('LoyaltyCustomers')
+
+#############################################################################################################################################################################
+
+LtyCustSntvt_Df = spark.sql("""SELECT * FROM LoyaltyCustomers""")
+
+#############################################################################################################################################################################
+
+display(LtyCustSntvt_Df)
+
+#############################################################################################################################################################################
+
+LtyCustSntvt_Df.printSchema()
+
+#############################################################################################################################################################################
+
+## Validating Columns to be used
+
+#LtyCustSntvt_Df.groupBy('COUNTRY_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('COUNTRY_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('CURRENCY_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LANGUAGE_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LANGUAGE_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LOYALTY_TOKEN_PAN_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LOYALTY_PROGRAMME_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('EMAIL_ADDRESS_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('FIRST_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PATRONYMIC_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LAST_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('GENDER_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('BIRTH_DT').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ARCHIVED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_LINE_1_TXT').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_LINE_2_TXT').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_COMPANY_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_HOUSENUMBER_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_CITY_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_STATE_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_COUNTRY_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('POSTAL_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PROMOTION_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('REWARD_TP_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('BA_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('MOBILE_PHONE_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('OTHER_PHONE_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('WORK_PHONE_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('IDENTITY_OR_PASSPORT_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LICENSE_PLATE_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('DRIVER_TP_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('SHELL_DIGITAL_ACCOUNT_TP_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LION_CUSTOMER_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('DRIVE_ACTIVATED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('DRIVE_EUROSHELLCARDHOLDER_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LOYALTY_ACTIVATED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('MYGARAGE_ACTIVATED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PAYMENTS_ACTIVATED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PAYMENTS_ERECEIPT_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('CDC_TP_CD').count().show(2000)
+#LtyCustSntvt_Df.groupBy('COUNTRY_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('SOURCE_SHELL_DIGITAL_ACCOUNT_ID').count().show(2000)
+dft = LtyCustSntvt_Df.withColumn('length_col2', length(LtyCustSntvt_Df.SOURCE_SHELL_DIGITAL_ACCOUNT_ID))
+#LtyCustSntvt_Df.groupBy('CREATED_DT').count().show(2000)
+#LtyCustSntvt_Df.groupBy('UPDATED_DT').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PRIMARY_VRN_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('DRIVE_ACTIVATED_AT_DTM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LOYALTY_ACTIVATED_AT_DTM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('MYGARAGE_ACTIVATED_AT_DTM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('PAYMENTS_ACTIVATED_AT_DTM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('GOPLUS_ACTIVATED_IND').count().show(2000)
+#LtyCustSntvt_Df.groupBy('GOPLUS_ACTIVATED_AT_DTM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('ADDRESS_COUNTRY_CITY_NM').count().show(2000)
+#LtyCustSntvt_Df.groupBy('COUNTRY_CUSTOMER_TP').count().show(2000)
+#LtyCustSntvt_Df.groupBy('OTHER_MOBILE_PHONE_NO').count().show(2000)
+#LtyCustSntvt_Df.groupBy('LOAD_ID').count().show(2000)
+#LtyCustSntvt_Df.groupBy('SHELL_DIGITAL_ACCOUNT_ID').count().show(2000)
+
+#############################################################################################################################################################################
+
+row1 = dft.agg({"length_col2": "min"}).collect()[0]
+print(row1)
+#print(row1["max(x)"])
+
+#############################################################################################################################################################################
+
+#LtyCustSntvt_Df.select('COUNTRY_NM').distinct().rdd.map(lambda r: r[0]).collect()
+
+#############################################################################################################################################################################
+
+%md
+##### Loading UK Data from SQL Server 
+
+#############################################################################################################################################################################
+
+%md
+###### Connection String
+
+#############################################################################################################################################################################
+
+jdbcHostname = "ci-dashboards-1868327-prod.database.windows.net"
+jdbcDatabase = "CI_ODE_UK"
+username = "data_analytics"
+password = "***********************"
+jdbcPort = 1433
+jdbcUrl = "jdbc:sqlserver://{0}:{1};database={2}".format(jdbcHostname, jdbcPort, jdbcDatabase)
+
+connectionProperties = {
+  "user" : username,
+  "password" : password,
+  "driver" : "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+}
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Customer Segmentation
+
+#############################################################################################################################################################################
+
+pushdown_query = '''
+(
+SELECT * FROM [data_analytics].[UK_SEGMENTS]
+) 
+cust_seg
+'''
+cust_Segment = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)
+
+#############################################################################################################################################################################
+
+display(cust_Segment)
+
+#############################################################################################################################################################################
+
+cust_Segment.printSchema()
+
+#############################################################################################################################################################################
+
+cust_Segment.groupBy('SSO_ID').count().show(2000)
+
+#############################################################################################################################################################################
+
+dft = cust_Segment.withColumn('length_col2', length(cust_Segment.SSO_ID))
+
+#############################################################################################################################################################################
+
+row1 = dft.agg({"length_col2": "max"}).collect()[0]
+print(row1)
+#print(row1["max(x)"])
+
+#############################################################################################################################################################################
+
+#cust_Segment.groupBy('SSO_ID').count().show(2000)
+cust_Segment.groupBy('fuel_segment').count().show(2000)
+cust_Segment.groupBy('cr_segment').count().show(2000)
+cust_Segment.groupBy('energy_segment').count().show(2000)
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Transactional Data
+
+#############################################################################################################################################################################
+
+pushdown_query = '''
+(
+SELECT * FROM [DATABRICKS].[CUST_TRX_ARCHIVE] WHERE DATEPART(YEAR, TRANSACTION_DATE) IN ('2019', '2020', '2021') AND CAST(TRANSACTION_DATE AS DATE) < '2021-07-01'
+) 
+trxData
+'''
+trnxData = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)
+
+#############################################################################################################################################################################
+
+display(trnxData)
+
+#############################################################################################################################################################################
+
+#row1 = trnxData.agg({"TRANSACTION_DATE" : "max"}).collect()[0]
+#print(row1)
+
+#trnxData.groupBy('TRANSACTION_DATE').max().show(2000)
+#row1 = trnxData.agg({"TRANSACTION_DATE": "max"}).collect()[0][0]
+#print(row1)
+
+trnxData.select([max("TRANSACTION_DATE")]).show()
+#result.show()
+
+#print(row1["max(x)"])
+
+#############################################################################################################################################################################
+
+trnxData.printSchema()
+
+#############################################################################################################################################################################
+
+#trnxData.groupBy('COUNTRY_CODE').count().show(2000)
+#trnxData.groupBy('CUSTOMER_UUID').count().show(2000)
+#trnxData.groupBy('METHOD_OF_IDENTIFICATION').count().show(2000)
+#trnxData.groupBy('TRANSACTION_DATE').count().show(2000)
+#trnxData.groupBy('SITE_CODE').count().show(2000)
+#trnxData.groupBy('RECEIPT_NUMBER').count().show(2000)
+trnxData.groupBy('METHOD_OF_PAYMENT').count().show(2000)
+#trnxData.groupBy('SEQ').count().show(2000)
+#trnxData.groupBy('PRODUCT_CODE').count().show(2000)
+#trnxData.groupBy('QUANTITY').count().show(2000)
+#trnxData.groupBy('UNIT_PRICE').count().show(2000)
+#trnxData.groupBy('DISCOUNT_VALUE').count().show(2000)
+#trnxData.groupBy('OFFER_CODE').count().show(2000)
+#trnxData.groupBy('OFFER_USED_QTY').count().show(2000)
+#trnxData.groupBy('QV_FLAG').count().show(2000)
+#trnxData.groupBy('CATEGORY_CODE').count().show(2000)
+#trnxData.groupBy('CATEGORY_NAME').count().show(2000)
+#trnxData.groupBy('SUB_CATEGORY_CODE').count().show(2000)
+#trnxData.groupBy('SUB_CATEGORY_NAME').count().show(2000)
+#trnxData.groupBy('TOT_MARGIN').count().show(2000)
+#trnxData.groupBy('B2B_FLAG').count().show(2000)
+#trnxData.groupBy('LOADED_DATE').count().show(2000)
+#trnxData.groupBy('LOG_DATE_TIME').count().show(2000)
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Category Mapping
+
+#############################################################################################################################################################################
+
+pushdown_query = '''
+(
+SELECT * FROM [DATABRICKS].[PRODUCT_HIERARCHY]
+) 
+catMap
+'''
+catMapping = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)
+catMapping.createOrReplaceTempView('catMap')
+
+#############################################################################################################################################################################
+
+display(catMapping)
+
+#############################################################################################################################################################################
+
+catMapping.printSchema()
+
+#############################################################################################################################################################################
+
+#catMapping.groupBy('COUNTRY_CODE').count().show(2000)
+#catMapping.groupBy('CLASS_CODE').count().show(2000)
+#catMapping.groupBy('CLASS_NAME').count().show(2000)
+#catMapping.groupBy('CATEGORY_CODE').count().show(2000)
+#catMapping.groupBy('CATEGORY_NAME').count().show(2000)
+#catMapping.groupBy('SUB_CATEGORY_CODE').count().show(2000)
+catMapping.groupBy('CATEGORY_NAME','SUB_CATEGORY_NAME').count().show(2000)
+#catMapping.groupBy('PRODUCT_CODE').count().show(2000)
+#catMapping.groupBy('PRODUCT_DESCRIPTION').count().show(2000)
+#catMapping.groupBy('OWNERSHIP').count().show(2000)
+#catMapping.groupBy('UNIT_MEASURE').count().show(2000)
+#catMapping.groupBy('LOADED_DATE').count().show(2000)
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Payment Method
+
+#############################################################################################################################################################################
+
+pushdown_query = '''
+(
+SELECT * FROM [DATABRICKS].[LOOKUP_METHOD_OF_PAYMENT]
+) 
+pmntMthd
+'''
+paymentMthd = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)
+
+#############################################################################################################################################################################
+
+display(paymentMthd)
+
+#############################################################################################################################################################################
+
+paymentMthd.printSchema()
+
+#############################################################################################################################################################################
+
+paymentMthd.createOrReplaceTempView('PAYMENTMTHD')
+
+#############################################################################################################################################################################
+
+paymentMthdUpdt = spark.sql(""" 
+select
+DISTINCT METHOD_OF_PAYMENT_ID, 
+case 
+    when METHOD_OF_PAYMENT_ID=1 then "CASH"
+    when METHOD_OF_PAYMENT_ID=2 then "AllStar"
+    when METHOD_OF_PAYMENT_ID=3 then "CREDIT CARD"
+    when METHOD_OF_PAYMENT_ID=4 then "Amex"
+    when METHOD_OF_PAYMENT_ID=5 then "Arval"
+    when METHOD_OF_PAYMENT_ID=7 then "EFTICC"
+    when METHOD_OF_PAYMENT_ID=9 then "ACCOUNT"
+    when METHOD_OF_PAYMENT_ID=10 then "VISA"
+    when METHOD_OF_PAYMENT_ID=11 then "Drive Off"
+    when METHOD_OF_PAYMENT_ID=15 then "Euroshell"
+    when METHOD_OF_PAYMENT_ID=16 then "CASH"
+    when METHOD_OF_PAYMENT_ID=20 then "Letter of Intent"
+    when METHOD_OF_PAYMENT_ID=22 then "MASTERCARD"
+    when METHOD_OF_PAYMENT_ID=29 then "VISA"
+    when METHOD_OF_PAYMENT_ID=31 then "Shell Voucher"
+    when METHOD_OF_PAYMENT_ID=32 then "Voucher"
+    when METHOD_OF_PAYMENT_ID=40 then "Euroshell CRT"
+    when METHOD_OF_PAYMENT_ID=41 then "ESSO CRT"
+    when METHOD_OF_PAYMENT_ID=45 then "Euroshell CRT 2"
+    when METHOD_OF_PAYMENT_ID=65 then "Loyalty Voucher"
+    when METHOD_OF_PAYMENT_ID=72 then "Mobile Payment - PayPal"
+    when METHOD_OF_PAYMENT_ID=73 then "Mobile Payment - Amex"
+    when METHOD_OF_PAYMENT_ID=74 then "Mobile Payment - Mastercard"
+    when METHOD_OF_PAYMENT_ID=75 then "Mobile Payment - VISA"
+    when METHOD_OF_PAYMENT_ID=77 then "Mobile Payment - EuroShell"
+    when METHOD_OF_PAYMENT_ID=80 then "Mobile Payment - Apple/GooglePay MC"
+    when METHOD_OF_PAYMENT_ID=81 then "Mobile Payment - Apple/GooglePay Visa"
+    when METHOD_OF_PAYMENT_ID=82 then "Mobile Payment - Apple/GooglePay AE"
+    when METHOD_OF_PAYMENT_ID=94 then "Mobile Payment - VISA Checkout"
+    when METHOD_OF_PAYMENT_ID=95 then "Mobile Payment - CARD ON FILE"
+    else METHOD_OF_PAYMENT 
+end as METHOD_OF_PAYMENT_DESC
+from PAYMENTMTHD 
+""")
+paymentMthdUpdt.createOrReplaceTempView('PAYMENTMTHDUPDT')
+
+#############################################################################################################################################################################
+
+display(paymentMthdUpdt)
+
+#############################################################################################################################################################################
+
+paymentMthdUpdt.printSchema()
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Site Location Details From DataBricks
+
+#############################################################################################################################################################################
+
+pushdown_query = '''
+(
+SELECT * FROM [DATABRICKS].[SITE_DETAILS]
+) 
+siteDetail
+'''
+siteDBDetails = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)
+
+#############################################################################################################################################################################
+
+display(siteDBDetails)
+
+#############################################################################################################################################################################
+
+siteDBDetails.printSchema()
+
+#############################################################################################################################################################################
+
+%md
+###### Reading Site Details from GD
+
+#############################################################################################################################################################################
+
+rstsSiteDetails = spark.read.format('csv')\
+                            .option("header", "true")\
+                            .load("adl://prdszendsadlsrdpcuratebc.azuredatalakestore.net/CRMRDP/SelfService/VivekKumar8/SiteDetails17032021")\
+                            .createOrReplaceTempView('RSTSSiteDetails')
+
+#############################################################################################################################################################################
+
+rstsSiteDetails_Df = spark.sql("""SELECT * FROM RSTSSiteDetails WHERE `Country Code`  in ('GB')""")
+rstsSiteDetails_Df.printSchema()
+
+#############################################################################################################################################################################
+
+display(rstsSiteDetails_Df)
+
+#############################################################################################################################################################################
+
+%md
+#### Joining Data
+
+#############################################################################################################################################################################
+
+%md
+######Transaction Data and Product Grouping
+
+#############################################################################################################################################################################
+
+trnxNProd = trnxData.join(catMapping, on=['PRODUCT_CODE'], how='left')\
+                    .drop(trnxData.SEQ)\
+                    .drop(trnxData.CATEGORY_CODE)\
+                    .drop(trnxData.SUB_CATEGORY_CODE)\
+                    .drop(trnxData.LOADED_DATE)\
+                    .drop(trnxData.LOG_DATE_TIME)\
+                    .drop(catMapping.COUNTRY_CODE)\
+                    .drop(catMapping.CLASS_CODE)\
+                    .drop(catMapping.CATEGORY_CODE)\
+                    .drop(catMapping.CATEGORY_NAME)\
+                    .drop(catMapping.SUB_CATEGORY_CODE)\
+                    .drop(catMapping.SUB_CATEGORY_NAME)\
+                    .drop(catMapping.PRODUCT_CODE)\
+                    .drop(catMapping.LOADED_DATE)
+#display(trnxNProd)
+
+#############################################################################################################################################################################
+
+%md
+######Updated Transaction Data and Loyalty Customer Details
+
+#############################################################################################################################################################################
+
+trnxNProd = trnxNProd.join(LtyCustSntvt_Df.select(col("LOYALTY_TOKEN_PAN_ID"),
+                                                   col("EMAIL_ADDRESS_ID"),
+                                                   col("GENDER_NM"),
+                                                   col("BIRTH_DT"),
+                                                   col("ADDRESS_CITY_NM"),
+                                                   col("MOBILE_PHONE_NO"),
+                                                   col("OTHER_PHONE_NO"),
+                                                   col("WORK_PHONE_NO"),
+                                                   col("SOURCE_SHELL_DIGITAL_ACCOUNT_ID"),
+                                                   col("SHELL_DIGITAL_ACCOUNT_ID")), 
+                            trnxNProd.CUSTOMER_UUID == LtyCustSntvt_Df.SOURCE_SHELL_DIGITAL_ACCOUNT_ID, 
+                            how='left')
+#display(trnxNProd)
+
+#############################################################################################################################################################################
+
+%md
+######Updated Transaction Data and Payment Method
+
+#############################################################################################################################################################################
+
+trnxNProd = trnxNProd.join(paymentMthdUpdt,
+                           trnxNProd.METHOD_OF_PAYMENT == paymentMthdUpdt.METHOD_OF_PAYMENT_ID,
+                           how='left')\
+                      .drop(paymentMthdUpdt.METHOD_OF_PAYMENT_ID)
+#display(trnxNProd)
+
+#############################################################################################################################################################################
+
+%md
+######Updated Transaction Data and Site Lat Long from RSTS
+
+#############################################################################################################################################################################
+
+trnxNProd = trnxNProd.join(rstsSiteDetails_Df,
+                           trnxNProd.SITE_CODE == rstsSiteDetails_Df['Global Retail Site ID'],
+                           how='left')\
+                    .drop(rstsSiteDetails_Df['Global Retail Site ID'])\
+                    .drop(rstsSiteDetails_Df['Country Code'])\
+                    .drop(rstsSiteDetails_Df.Country)\
+                    .drop(rstsSiteDetails_Df.Site)\
+                    .drop(rstsSiteDetails_Df['Road Type Desc'])\
+                    .drop(rstsSiteDetails_Df['Road Type Code'])\
+                    .drop(rstsSiteDetails_Df.City)\
+                    .drop(rstsSiteDetails_Df['Postal Code'])\
+                    .drop(rstsSiteDetails_Df['Shop Format'])\
+                    .drop(rstsSiteDetails_Df['Shop Format Type Code'])\
+                    .drop(rstsSiteDetails_Df['Store Size'])\
+                    .drop(rstsSiteDetails_Df.Retailer)\
+                    .drop(rstsSiteDetails_Df['Retailer Code'])\
+                    .drop(rstsSiteDetails_Df['Operating Platform Code'])\
+                    .drop(rstsSiteDetails_Df['Territory Description'])\
+                    .drop(rstsSiteDetails_Df['Territory Code'])\
+                    .drop(rstsSiteDetails_Df['Street Address'])\
+                    .drop(rstsSiteDetails_Df['Fax No'])\
+                    .drop(rstsSiteDetails_Df['Telephone Country Code'])\
+                    .drop(rstsSiteDetails_Df['Telephone Extension No'])\
+                    .drop(rstsSiteDetails_Df['Telephone No'])\
+                    .drop(rstsSiteDetails_Df['Ownership Long Desc'])\
+                    .drop(rstsSiteDetails_Df['Ownership Short Desc'])\
+                    .drop(rstsSiteDetails_Df['Site Ownership Code'])
+
+#############################################################################################################################################################################
+
+%md
+######Updated Transaction Data and Customer Segmentation Details
+
+#############################################################################################################################################################################
+
+trnxNProd = trnxNProd.join(cust_Segment,
+                           trnxNProd.CUSTOMER_UUID == cust_Segment.SSO_ID,
+                           how='left')\
+                      .drop(cust_Segment.SSO_ID)
+
+#############################################################################################################################################################################
+
+display(trnxNProd)
+
+#############################################################################################################################################################################
+
+trnxNProd.createOrReplaceTempView('trnxNProdTable')
+
+#############################################################################################################################################################################
+
+cust_Segment.groupBy('fuel_segment').count().show(2000)
+trnxNProd.groupBy('fuel_segment').count().show(2000)
+
+#############################################################################################################################################################################
+
+trnxNProd_summary = trnxNProd.groupby(["fuel_segment"]).agg(countDistinct("CUSTOMER_UUID"))
+trnxNProd_summary.show(2000)
+
+#############################################################################################################################################################################
+
+cust_Segment.groupBy('cr_segment').count().show(2000)
+trnxNProd.groupBy('cr_segment').count().show(2000)
+
+#############################################################################################################################################################################
+
+trnxNProd_summary = trnxNProd.groupby(["cr_segment"]).agg(countDistinct("CUSTOMER_UUID"))
+trnxNProd_summary.show(2000)
+
+#############################################################################################################################################################################
+
+cust_Segment.groupBy('energy_segment').count().show(2000)
+trnxNProd.groupBy('energy_segment').count().show(2000)
+
+#############################################################################################################################################################################
+
+trnxNProd_summary = trnxNProd.groupby(["energy_segment"]).agg(countDistinct("CUSTOMER_UUID"))
+trnxNProd_summary.show(2000)
+
+#############################################################################################################################################################################
+
+%md
+##### Writing data to ADL Path
+
+#############################################################################################################################################################################
+
+spark.sql("select * from {}".format("trnxNProdTable")).repartition(4).write.format("com.databricks.spark.csv").option("header", "true").mode("overwrite").option("inferSchema", "true").option("delimiter",",").save("adl://prdszendsadlsrdpcuratebc.azuredatalakestore.net/CRMRDP/SelfService/VivekKumar8/uk_loyalty_customer_data_20210317")
+
+#############################################################################################################################################################################
+
+spark\
+    .sql("select * from {}"\
+         .format("catMap"))\
+    .repartition(1)\
+    .write\
+    .format("com.databricks.spark.csv")\
+    .option("header", "true")\
+    .mode("overwrite")\
+    .option("inferSchema", "true")\
+    .option("delimiter",",")\
+    .save("adl://prdszendsadlsrdpcuratebc.azuredatalakestore.net/CRMRDP/SelfService/VivekKumar8/uk_loyalty_productCategoryMapping_20210325")
+
+#############################################################################################################################################################################
+
+%md
+####Reading back compiled Transaction data
+
+#############################################################################################################################################################################
