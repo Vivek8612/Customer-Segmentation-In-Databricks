@@ -779,3 +779,110 @@ spark\
 ####Reading back compiled Transaction data
 
 #############################################################################################################################################################################
+start = datetime.now()
+
+custTrnxData = spark.read\
+                    .format('csv')\
+                    .option("header", "true")\
+                    .option("inferSchema", "true")\
+                    .load("adl://prdszendsadlsrdpcuratebc.azuredatalakestore.net/CRMRDP/SelfService/VivekKumar8/uk_loyalty_customer_data_20210317")\
+                    .createOrReplaceTempView('custTrnxData')
+
+print("Script run times")
+print("Script execution stared at:", start)
+end = datetime.now()
+print("Script execution ended at:", end) 
+total_time = end - start
+print("Script totally ran for :", total_time)
+
+#############################################################################################################################################################################
+
+%md
+##### Register as DataFrame 
+
+#############################################################################################################################################################################
+
+custTrnxData_Df = spark.sql("""SELECT * FROM custTrnxData""")
+
+#############################################################################################################################################################################
+
+custTrnxData_Df.count()
+
+#############################################################################################################################################################################
+
+display(spark.sql("""SELECT COUNT(distinct CUSTOMER_UUID) as UniqueLtyCust FROM custTrnxData"""))
+
+#############################################################################################################################################################################
+
+%md
+#### Feature Enginnering
+
+#############################################################################################################################################################################
+
+# Extracting Revenue, Month, Day, Year Week Day, Week of year, Date
+custTrnxData_Df = custTrnxData_Df.withColumn("REVENUE", round((col("QUANTITY") * col("UNIT_PRICE"))-col("DISCOUNT_VALUE"),2))
+custTrnxData_Df = custTrnxData_Df.withColumn('MONTH', month('TRANSACTION_DATE')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('DAY', dayofmonth('TRANSACTION_DATE')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('YEAR', year('TRANSACTION_DATE')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('WEEK_DAY', dayofweek('TRANSACTION_DATE')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('WEEK_NO', weekofyear('TRANSACTION_DATE')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('DATE', date_format('TRANSACTION_DATE','MM/dd/yyyy')).alias('custTrnxData_Df')
+custTrnxData_Df = custTrnxData_Df.withColumn('YEAR_MONTH', (year('TRANSACTION_DATE')*100)+month('TRANSACTION_DATE'))
+
+custTrnxData_Df = custTrnxData_Df.withColumn('BTHD_MONTH', month('BIRTH_DT'))
+custTrnxData_Df = custTrnxData_Df.withColumn('BTHD_DAY', dayofmonth('BIRTH_DT'))
+custTrnxData_Df = custTrnxData_Df.withColumn('BTHD_YEAR', year('BIRTH_DT'))
+
+# B2B Flag alteration
+custTrnxData_Df = custTrnxData_Df.withColumn("B2B_FLAG_alt",when(col('B2B_FLAG') == 'Y', 'Y').when(col('B2B_FLAG') == '0', 'N').otherwise('N'))
+
+# Concatenating Customer UUID and B2B Flag 
+custTrnxData_Df = custTrnxData_Df.withColumn("CUSTOMER_UUID_alt",concat(col('CUSTOMER_UUID'),lit("_"),col('B2B_FLAG_alt')))
+
+#############################################################################################################################################################################
+
+display(custTrnxData_Df)
+
+#############################################################################################################################################################################
+
+%md
+##### Handeling Customers with B2B and B2C both type of Transactions
+
+#############################################################################################################################################################################
+
+CustYearB2bB2cInd = custTrnxData_Df\
+                          .select(\
+                                  col("CUSTOMER_UUID"),\
+                                  col("YEAR"),\
+                                  col("B2B_FLAG_alt"))\
+                          .distinct()\
+                          .orderBy(\
+                                   asc("CUSTOMER_UUID"),\
+                                   asc("YEAR"))
+
+#############################################################################################################################################################################
+
+display(CustYearB2bB2cInd)
+
+#############################################################################################################################################################################
+
+CustYearB2bB2cInd = CustYearB2bB2cInd\
+                                .withColumn("Year_alt",
+                                            concat(col('YEAR'),lit("_"),
+                                                   col('B2B_FLAG_alt')))
+
+#############################################################################################################################################################################
+
+CustYOYB2bB2cInd = CustYearB2bB2cInd\
+                      .groupBy(col("CUSTOMER_UUID", ))\
+                      .pivot("Year_alt")\
+                      .count()\
+                      .orderBy(\
+                               asc("CUSTOMER_UUID"))
+
+#############################################################################################################################################################################
+
+display(CustYOYB2bB2cInd)
+
+#############################################################################################################################################################################
+
